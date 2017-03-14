@@ -1,9 +1,7 @@
 import csv
 import pandas as pd
-from mas_class_tools import CallConversion
-from mas_class_tools import TraitN9
-from mas_class_tools import TraitCastle
-from mas_class_tools import TraitCR
+from pandas import ExcelWriter
+from mas_class_tools import *
 import glob
 import os
 
@@ -85,23 +83,46 @@ def cgl_conv(header_list):
     if 'Cyto Zygosity Call' in header_list:
         cgl_sum += 1
 
-    if 'GT200 Zygosity Call' in header_list:
+    if 'GT 200 Zygosity Call' in header_list:
         cgl_sum += 10
 
-    if 'LepR3 Zygosity Call' in header_list:
+    if 'LepR3-R3S3A Zygosity Call' in header_list:
         cgl_sum += 100
 
     return cgl_sum
 
+#  ----------------------------------  read the folder and find files for analysis  -----------------------------------
+
+for fname in results_files:
+    print 'Analyzing ' + fname + '...'
+
+    #  make the naming conventions for the files being written in the end
+    encodename = 'encoded_'+fname
+    find_the_dot = fname.find('.')
+    final_name = fname[:find_the_dot] + '_completed.xlsx'
+    results_writer = ExcelWriter(final_name, options={'encoding': 'utf-8'})
+
+#  ---------------------------------------  Encoding the file to UTF-8  -----------------------------------------------
+    with open(fname, 'r+') as encode_kraken:
+        encode_reader = csv.DictReader(encode_kraken)
+        encode_headers = encode_reader.fieldnames
+
+    with open(encodename, 'wb') as encode_file:
+        writer = csv.DictWriter(encode_file, fieldnames=encode_headers)
+
+        r = open(fname, 'rb')
+
+        for line in r:
+            bits = line.split(',')
+            bits[3] = bits[3].decode('latin-1').encode('utf-8')
+            encode_file.write(','.join(bits))
+
+        r.close()
+
 #  ------------------------------------------  Analysis  --------------------------------------------------------------
 
 #  Determine what assays were run in the Kraken study, and if anything needs to be analyzed or converted in the file
-for fname in results_files:
-
-    find_the_dot = fname.find('.')
-    final_name = fname[:find_the_dot] + '_completed.xlsx'
-
-    with open(fname, 'rb') as kraken:
+    with open(encodename, 'rb') as kraken:
         kreader = csv.DictReader(kraken)
         kheaders = kreader.fieldnames
         new_headers = cyto_gt200(kheaders)
@@ -114,8 +135,8 @@ for fname in results_files:
 
             # get the index of which columns they are in
             cyto = ['Cyto Zygosity Call']
-            gt200 = ['GT200 Zygosity Call']
-            lep3 = ['LepR3 Zygosity Call']
+            gt200 = ['GT 200 Zygosity Call']
+            lep3 = ['LepR3-R3S3A Zygosity Call']
 
             cyto_index = []
             for ci in cyto:
@@ -219,8 +240,8 @@ for fname in results_files:
             os.remove('temp_' + fname)
 
         else:
-            kdf = pd.read_csv(fname)
-            df_final = pd.read_csv(fname)
+            kdf = pd.read_csv(encodename)
+            df_final = pd.read_csv(encodename)
 
     pandas_list = []  # an empty list to append each panels dataframe name for a final merge sequence
 
@@ -251,7 +272,7 @@ for fname in results_files:
         with open('n9_temp.csv', 'rb') as n9input:
             n9reader = csv.DictReader(n9input)
             n9headers = n9reader.fieldnames
-            n9headers.append('ACM N9 Summary Confirm')
+            n9headers.append('ACM N9 Summary')
 
             with open('n9_call.csv', 'wb') as n9output:
                 n9writer = csv.DictWriter(n9output, fieldnames=n9headers)
@@ -269,12 +290,13 @@ for fname in results_files:
                                        'DBSNP357253 Zygosity Call': line['DBSNP357253 Zygosity Call'],
                                        'DBSNP357255 Zygosity Call': line['DBSNP357255 Zygosity Call'],
                                        'DBSNP357256 Zygosity Call': line['DBSNP357256 Zygosity Call'],
-                                       'ACM N9 Summary Confirm': n9_call})
+                                       'ACM N9 Summary': n9_call})
 
                 pandas_list.append('n9')
 
         os.remove('n9_temp.csv')
 
+    print 'good at n9'
     # --------------------------------------- Castle Panel ------------------------------------------------------------
 
     """determine if Castle panel is in the kraken study, and if so makes a df with a Castle call"""
@@ -350,7 +372,7 @@ for fname in results_files:
         with open('cr_temp.csv', 'rb') as crinput:
             crreader = csv.DictReader(crinput)
             crheaders = crreader.fieldnames
-            crheaders.append('CR Mendel Summary Confirm')
+            crheaders.append('CR Mendel Summary')
 
             with open('cr_call.csv', 'wb') as croutput:
                 crwriter = csv.DictWriter(croutput, fieldnames=crheaders)
@@ -365,7 +387,7 @@ for fname in results_files:
                                        'Geno_Id': line['Geno_Id'], 'RowId': line['RowId'], 'Loc Seq#': line['Loc Seq#'],
                                        'CRM1 Zygosity Call': line['CRM1 Zygosity Call'],
                                        'CRM2 Zygosity Call': line['CRM2 Zygosity Call'],
-                                       'CR Mendel Summary Confirm': cr_call})
+                                       'CR Mendel Summary': cr_call})
 
                 pandas_list.append('cr')
 
@@ -390,8 +412,10 @@ for fname in results_files:
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('n9_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 10:  # if the panel consists of only Castle
         cas_df = pd.read_csv('cas_call.csv')
@@ -400,8 +424,10 @@ for fname in results_files:
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('cas_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 11:  # if the panel consists of N9 and Castle
         n9_df = pd.read_csv('n9_call.csv')
@@ -413,8 +439,10 @@ for fname in results_files:
         os.remove('n9_call.csv')
         os.remove('cas_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 100:  # if the panel consists of only CR
         cr_df = pd.read_csv('cr_call.csv')
@@ -423,8 +451,10 @@ for fname in results_files:
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 101:  # if the panel consists of N9 and CR
         n9_df = pd.read_csv('n9_call.csv')
@@ -436,8 +466,10 @@ for fname in results_files:
         os.remove('n9_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 110:  # if the panel consists of Castle and CR
         cas_df = pd.read_csv('cas_call.csv')
@@ -449,8 +481,10 @@ for fname in results_files:
         os.remove('cas_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     elif merge_number == 111:  # if the panel consists of N9, Castle, and CR
         n9_df = pd.read_csv('n9_call.csv')
@@ -465,11 +499,16 @@ for fname in results_files:
         os.remove('cas_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        merge_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
 
     else:
-        merge_final = pd.merge(left=df_initial, right=df_final, how='left')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(final_name, index=False)  # write final merge to excel
+        df_final.to_excel(results_writer, index=False)
+        results_writer.save()
         os.chdir(path)  # change back to root folder
+        os.remove(encodename)
+
+    print 'Successfully completed ' + fname + '...'
