@@ -2,8 +2,10 @@ import csv
 import pandas as pd
 from pandas import ExcelWriter
 from mas_class_tools import *
+from summary_class import *
 import glob
 import os
+import time
 
 '''Version 2 of the TLM panel tool-- Validated March 2017 --Author u590135'''
 
@@ -23,6 +25,7 @@ for i in result:
         continue
     else:
         results_files.append(i)
+
 
 # ---------------------------------------- Defined Variables ----------------------------------------------------------
 
@@ -91,37 +94,51 @@ def cgl_conv(header_list):
 
     return cgl_sum
 
+
 #  ----------------------------------  read the folder and find files for analysis  -----------------------------------
 
 for fname in results_files:
-    print 'Analyzing ' + fname + '...'
+    print('Analyzing ' + fname + '...')
 
     #  make the naming conventions for the files being written in the end
-    encodename = 'encoded_'+fname
+    encodename = 'encoded_' + fname
     find_the_dot = fname.find('.')
     final_name = fname[:find_the_dot] + '_completed.xlsx'
     results_writer = ExcelWriter(final_name, options={'encoding': 'utf-8'})
 
-#  ---------------------------------------  Encoding the file to UTF-8  -----------------------------------------------
+    #  ---------------------------------------  Encoding the file to UTF-8  -------------------------------------------
     with open(fname, 'r+') as encode_kraken:
         encode_reader = csv.DictReader(encode_kraken)
         encode_headers = encode_reader.fieldnames
 
-    with open(encodename, 'wb') as encode_file:
+    with open(encodename, 'wb') as encode_file:  # write a temporary UTF-8 encoded version of the kraken file
         writer = csv.DictWriter(encode_file, fieldnames=encode_headers)
 
         r = open(fname, 'rb')
 
         for line in r:
             bits = line.split(',')
-            bits[3] = bits[3].decode('latin-1').encode('utf-8')
+            bits[3] = bits[3].decode('latin-1').encode('utf-8')  # encode the pedigree line as UTF-8 instead of Latin-1
             encode_file.write(','.join(bits))
 
         r.close()
 
-#  ------------------------------------------  Analysis  --------------------------------------------------------------
+    #  ----------------------------------------  Summary Table  --------------------------------------------------------
 
-#  Determine what assays were run in the Kraken study, and if anything needs to be analyzed or converted in the file
+    with open(encodename, 'rb') as summary_kraken:
+        sum_reader = csv.DictReader(summary_kraken)
+        sum_headers = sum_reader.fieldnames
+        sum_assays = [i for i in sum_headers if 'Zygosity' in i]
+
+        summary_init = SummaryTable(sum_reader, sum_headers)
+        summary_dict = summary_init.get_summary()
+        summary_df1 = pd.DataFrame.from_dict(summary_dict)
+        summary_df2 = summary_df1[sum_assays]
+        summary_df = summary_df2.reindex(["Trait", "Seg", "Wildtype", "No Call", "Fail", "% Data Return"])
+
+    # ------------------------------------------  Analysis  ----------------------------------------------------------
+
+    #  Determine what assays were run in the Kraken study, and if anything needs to be analyzed or converted in the file
     with open(encodename, 'rb') as kraken:
         kreader = csv.DictReader(kraken)
         kheaders = kreader.fieldnames
@@ -129,7 +146,7 @@ for fname in results_files:
         conv_kraken = cgl_conv(kheaders)
         creader = csv.reader(kraken)
 
-    #  ----------------------------------- Cyto, GT200, and LepR3 Conversion ------------------------------------------
+        #  ----------------------------------- Cyto, GT200, and LepR3 Conversion --------------------------------------
 
         if conv_kraken > 0:  # if any of the three assays are in the kraken study.
 
@@ -140,6 +157,7 @@ for fname in results_files:
 
             cyto_index = []
             for ci in cyto:
+                # noinspection PyBroadException
                 try:
                     cyto_index.append(kheaders.index(ci))
                 except:
@@ -147,6 +165,7 @@ for fname in results_files:
 
             gt200_index = []
             for gi in gt200:
+                # noinspection PyBroadException
                 try:
                     gt200_index.append(kheaders.index(gi))
                 except:
@@ -154,6 +173,7 @@ for fname in results_files:
 
             lep3_index = []
             for li in lep3:
+                # noinspection PyBroadException
                 try:
                     lep3_index.append(kheaders.index(li))
                 except:
@@ -167,11 +187,11 @@ for fname in results_files:
                 for line in creader:
 
                     if conv_kraken == 1:  # Kraken file has A Cyto only
-                        cyto_col = int(cyto_index[0])
-                        cy = CallConversion(line[cyto_col])
-                        cy_call = cy.cyto_call()
-                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)
-                        hdrwriter.writerow(line)
+                        cyto_col = int(cyto_index[0])  # get the A cyto column number from the index
+                        cy = CallConversion(line[cyto_col])  # call on class CallConverison to convert cyto row data
+                        cy_call = cy.cyto_call()  # return the call as A-Cyto or B-Cyto
+                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)  # replace call
+                        hdrwriter.writerow(line)  # write the line to the new temporary file
 
                     elif conv_kraken == 10:  # Kraken file has GT200 only
                         gt_col = int(gt200_index[0])
@@ -255,6 +275,7 @@ for fname in results_files:
     #  index the headers to see if the N9 panel is in the kraken file, and if so, which column #'s they are in
     n9_index = []
     for i in n9_panel:
+        # noinspection PyBroadException
         try:
             n9_index.append(kheaders.index(i))
         except:
@@ -296,7 +317,6 @@ for fname in results_files:
 
         os.remove('n9_temp.csv')
 
-    print 'good at n9'
     # --------------------------------------- Castle Panel ------------------------------------------------------------
 
     """determine if Castle panel is in the kraken study, and if so makes a df with a Castle call"""
@@ -306,6 +326,7 @@ for fname in results_files:
     #  index the headers to see if the castle panel is in the kraken file, and if so, which column #'s they are in
     castle_index = []
     for i in castle_panel:
+        # noinspection PyBroadException
         try:
             castle_index.append(kheaders.index(i))
         except:
@@ -355,6 +376,7 @@ for fname in results_files:
     #  index the headers to see if the CR panel is in the kraken file, and if so, which column #'s they are in
     cr_index = []
     for i in cr_panel:
+        # noinspection PyBroadException
         try:
             cr_index.append(kheaders.index(i))
         except:
@@ -392,7 +414,6 @@ for fname in results_files:
                 pandas_list.append('cr')
 
         os.remove('cr_temp.csv')
-
     # ----------------------------------------- Merge with Pandas -----------------------------------------------------
 
     # read each panels analyzed data as a dataframe, and merge them in sequence.
@@ -411,8 +432,10 @@ for fname in results_files:
         merge_init = pd.merge(left=df_initial, right=n9_df, how='left')
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('n9_call.csv')
+
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -424,7 +447,8 @@ for fname in results_files:
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('cas_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -439,7 +463,8 @@ for fname in results_files:
         os.remove('n9_call.csv')
         os.remove('cas_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -451,7 +476,8 @@ for fname in results_files:
         merge_final = pd.merge(left=merge_init, right=df_final, how='left')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -466,7 +492,8 @@ for fname in results_files:
         os.remove('n9_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -481,7 +508,8 @@ for fname in results_files:
         os.remove('cas_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
@@ -499,16 +527,24 @@ for fname in results_files:
         os.remove('cas_call.csv')
         os.remove('cr_call.csv')
         os.chdir(completed_path)  # change to path for completed files
-        merge_final.to_excel(results_writer, index=False)
+        merge_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
 
     else:
         os.chdir(completed_path)  # change to path for completed files
-        df_final.to_excel(results_writer, index=False)
+        df_final.to_excel(results_writer, 'Report', index=False)
+        summary_df.to_excel(results_writer, 'Summary Table')
         results_writer.save()
         os.chdir(path)  # change back to root folder
         os.remove(encodename)
 
-    print 'Successfully completed ' + fname + '...'
+    print 'Successfully completed ' + fname + '...\n'
+
+    time.sleep(2)
+
+print 'Analysis completed on all files'
+
+time.sleep(2)
