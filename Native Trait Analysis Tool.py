@@ -11,12 +11,12 @@ import time
 '''Version 3 of the TLM panel tool-- Validated April 2017 -- [Author: Brian James]'''
 
 #  get a list of all the csv files to run the script on
-path = r'C:\Users\u590135\Code\testing code\Trait and Seg Tool\version 3'
+path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3'
 extension = 'csv'
 os.chdir(path)
 result = [i for i in glob.glob('*.{}'.format(extension))]
 
-completed_path = r'C:\Users\u590135\Code\testing code\Trait and Seg Tool\version 3\completed'
+completed_path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3\completed'
 
 results_files = []
 for i in result:
@@ -253,7 +253,7 @@ for fname in results_files:
     n9_len = int(len(n9_index))
 
     # if N9 panel is in the kraken file, make a dataframe, and write that section to a new csv to run analysis
-    if n9_len > 0:
+    if n9_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         n9_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -305,7 +305,7 @@ for fname in results_files:
     cas_len = int(len(castle_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if cas_len == 4:
+    if cas_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         castle_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -356,7 +356,7 @@ for fname in results_files:
     cr_len = int(len(cr_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if cr_len > 0:
+    if cr_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         cr_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -399,16 +399,16 @@ for fname in results_files:
 
     #  index the headers to see if the CR panel is in the kraken file, and if so, which column #'s they are in
     rlm7s_index = []
-    for i in rlm7s_panel:
+    for rlm7si in rlm7s_panel:
         # noinspection PyBroadException
         try:
-            rlm7s_index.append(kheaders.index(i))
+            rlm7s_index.append(kheaders.index(rlm7si))
         except:
             continue
-    rlm7s_len = int(len(rlm7s_panel))
+    rlm7s_len = int(len(rlm7s_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if rlm7s_len > 0:
+    if rlm7s_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         rlm7s_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -451,16 +451,16 @@ for fname in results_files:
 
     #  index the headers to see if the CR panel is in the kraken file, and if so, which column #'s they are in
     rlm7w_index = []
-    for i in rlm7w_panel:
+    for rlm7wi in rlm7w_panel:
         # noinspection PyBroadException
         try:
-            rlm7w_index.append(kheaders.index(i))
+            rlm7w_index.append(kheaders.index(rlm7wi))
         except:
             continue
-    rlm7w_len = int(len(rlm7s_panel))
+    rlm7w_len = int(len(rlm7w_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if rlm7w_len == 2:
+    if rlm7w_len >= 2:
         # keep the unique identifiers from kraken study in new temp dataframe
         rlm7w_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -504,16 +504,16 @@ for fname in results_files:
 
     #  index the headers to see if the CR panel is in the kraken file, and if so, which column #'s they are in
     bl10_index = []
-    for i in bl10_panel:
+    for bl10i in bl10_panel:
         # noinspection PyBroadException
         try:
-            bl10_index.append(kheaders.index(i))
+            bl10_index.append(kheaders.index(bl10i))
         except:
             continue
-    bl10_len = int(len(bl10_panel))
+    bl10_len = int(len(bl10_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if bl10_len > 0:
+    if bl10_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         bl10_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
@@ -559,16 +559,16 @@ for fname in results_files:
 
     #  index the headers to see if the N13 panel is in the kraken file, and if so, which column #'s they are in
     n13_index = []
-    for i in n13_panel:
+    for n13i in n13_panel:
         # noinspection PyBroadException
         try:
-            n13_index.append(kheaders.index(i))
+            n13_index.append(kheaders.index(n13i))
         except:
             continue
-    n13_len = int(len(n13_panel))
+    n13_len = int(len(n13_index))
 
     # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
-    if n13_len > 0:
+    if n13_len >= 2:
         #  keep the unique identifiers from kraken study in new temp dataframe
         n13_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
 
