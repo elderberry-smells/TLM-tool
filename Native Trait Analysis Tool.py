@@ -11,12 +11,12 @@ import time
 '''Version 3 of the TLM panel tool-- Validated April 2017 -- [Author: Brian James]'''
 
 #  get a list of all the csv files to run the script on
-path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3'
+path = r'\\CA016NDOWD001\SaskatoonResearchStation\5. Lab\MAS\2. Project Data\TLM tool'
 extension = 'csv'
 os.chdir(path)
 result = [i for i in glob.glob('*.{}'.format(extension))]
 
-completed_path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3\completed'
+completed_path = r'\\CA016NDOWD001\SaskatoonResearchStation\5. Lab\MAS\2. Project Data\TLM tool\completed'
 
 results_files = []
 for i in result:
@@ -71,7 +71,7 @@ for fname in results_files:
     #  make the naming conventions for the files being written in the end
     encodename = 'encoded_' + fname
     find_the_dot = fname.find('.')
-    final_name = fname[:find_the_dot] + '_completed.xlsx'
+    final_name = fname[:find_the_dot] + '_Report.xlsx'
     results_writer = ExcelWriter(final_name, options={'encoding': 'utf-8'})
 
     #  ---------------------------------------  Encoding the file to UTF-8  -------------------------------------------
@@ -83,11 +83,15 @@ for fname in results_files:
         writer = csv.DictWriter(encode_file, fieldnames=encode_headers)
 
         r = open(fname, 'rb')
+        remove_controls = ['H7', 'H07', 'H8', 'H08', 'H9', 'H09', 'H10', 'H11', 'H12']
 
         for line in r:
             bits = line.split(',')
-            bits[3] = bits[3].decode('latin-1').encode('utf-8')  # encode the pedigree col as UTF-8 instead of Latin-1
-            encode_file.write(','.join(bits))
+            if bits[1] in remove_controls:
+                continue
+            else:
+                bits[3] = bits[3].decode('latin-1').encode('utf-8')  # encode the pedigree col as UTF-8, not Latin-1
+                encode_file.write(','.join(bits))
 
         r.close()
 
@@ -395,7 +399,7 @@ for fname in results_files:
     # -------------------------------------------  RLM7 Spring Analysis -----------------------------------------------
     """determine if RLM7 Spring panel is in the kraken study, and if so makes a df with a RLM7 spring call"""
 
-    rlm7s_panel = ['295698 Zygosity Call', '2395699 Zygosity Call']
+    rlm7s_panel = ['295698 Zygosity Call', '295699 Zygosity Call']
 
     #  index the headers to see if the CR panel is in the kraken file, and if so, which column #'s they are in
     rlm7s_index = []
@@ -423,7 +427,7 @@ for fname in results_files:
             rlm7sheaders = rlm7sreader.fieldnames
 
             with open('rlm7s_call.csv', 'wb') as rlm7soutput:    # make a new file with the rlm7 call column added
-                rlm7sheaders.append('RLM7 Spring Summary')
+                rlm7sheaders.append('RLM 7 Spring Summary')
                 rlm7swriter = csv.DictWriter(rlm7soutput, fieldnames=rlm7sheaders)
                 rlm7swriter.writeheader()
 
@@ -436,7 +440,7 @@ for fname in results_files:
 
                     rlm7s = Trait(dict_rlm7s)  # initiate the TLM class with dictionary
                     rlm7s_call = rlm7s.get_tlm_call()  # get the trait/seg/wildtype call for this line in the file
-                    line['RLM7 Spring Summary'] = rlm7s_call  # add call to the DictReader line
+                    line['RLM 7 Spring Summary'] = rlm7s_call  # add call to the DictReader line
 
                     rlm7swriter.writerow(line)  # write the line (with the call now in the line) to the temp call file
 
@@ -475,7 +479,7 @@ for fname in results_files:
             rlm7wheaders = rlm7wreader.fieldnames
 
             with open('rlm7w_call.csv', 'wb') as rlm7woutput:  # make a new file with the rlm7 call column added
-                rlm7wheaders.append('RLM7 Winter Summary')
+                rlm7wheaders.append('RLM 7 Winter Summary')
                 rlm7wwriter = csv.DictWriter(rlm7woutput, fieldnames=rlm7wheaders)
                 rlm7wwriter.writeheader()
 
@@ -488,7 +492,7 @@ for fname in results_files:
 
                     rlm7w = Trait(dict_rlm7w)  # initiate the TLM class with dictionary
                     rlm7w_call = rlm7w.get_tlm_call()  # get the trait/seg/wildtype call for this line in the file
-                    line['RLM7 Winter Summary'] = rlm7w_call  # add call to the DictReader line
+                    line['RLM 7 Winter Summary'] = rlm7w_call  # add call to the DictReader line
 
                     rlm7wwriter.writerow(line)  # write the line (with the call now in the line) to the temp call file
 
@@ -583,7 +587,7 @@ for fname in results_files:
             n13headers = n13reader.fieldnames
 
             with open('n13_call.csv', 'wb') as n13output:  # make a new file with the CR call column added
-                n13headers.append('N13 Summary')
+                n13headers.append('ACM N13 Summary')
                 n13writer = csv.DictWriter(n13output, fieldnames=n13headers)
                 n13writer.writeheader()
 
@@ -596,7 +600,7 @@ for fname in results_files:
 
                     n13 = Trait(dict_n13)  # initiate the TLM class with the dictionary
                     n13_call = n13.get_tlm_call()  # get the trait/seg/wildtype call for this line in the file
-                    line['N13 Summary'] = n13_call  # add call to the DictReader line
+                    line['ACM N13 Summary'] = n13_call  # add call to the DictReader line
 
                     n13writer.writerow(line)  # write the line (with the call now in the line) to the temp call file
 
@@ -657,6 +661,7 @@ for fname in results_files:
     else:
         merge5 = merge4
 
+
     # merge that with RLM7 winter dataframe if that panel is in the kraken file
 
     if 'rlm7w' in pandas_list:
@@ -689,10 +694,10 @@ for fname in results_files:
 
     print 'Successfully completed ' + fname + '...\n'
 
-    time.sleep(2)
+    time.sleep(1)
 
     os.remove(fname)
 
 print 'Analysis completed on all files'
 
-time.sleep(3)
+time.sleep(2)
