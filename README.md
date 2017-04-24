@@ -1,7 +1,7 @@
-# TLM-tool
-a tool for analyzing TLM assay panels and auto-calling the data set based on a master identification file.
+# TLM-tool description
+a tool for analyzing TLM assay panels and auto-calling the data set with the associated Trait/Seg/WT call of the panel.
 
-The tool itself is running csv, pandas, and os libraries.  It will analyze a kraken exported data set (csv file) and return an analyzed set complete with Trait/seg/wildtype calls for the N9, Castle, and clubroot panels.
+The tool itself is running csv, pandas, and os libraries.  It will analyze a kraken exported data set (csv file) and return an analyzed set complete with Trait/seg/wildtype calls for the N9, Castle, clubroot, RLM7 spring and winter, BL10 and N13 panels.
 
 
 Version 2 notes:
@@ -20,3 +20,12 @@ Native Trait Analaysis Tool amd TLM class added to repo.  This version has the f
 1.  Re-Wrote the tool (now called Native Trait Analysis Tool) to include more trait linked marker panels in the analysis, as well the TLM class takes the place of the mas_class_tools to complete the analysis and conversions in the file.  
 2.  Removed some functions no longer needed for the final merge sequence of the files with calls 
 3.  The TLM class was re-written to include more allele types as well it no longer draws from a specified set of markers.  Instead it has a dictionary passed into it of a number of assays that draws from the allele types to complete the call.  The number of assays in a panel no longer matters either as it will complete the call based on the ratios of trait/seg/null alleles.
+4.  The control well lines in the file are removed from the analysis (output of report no longer has lines H7-H12 from each 96 well plate)
+
+# How To Use Tool
+
+1. Get Kraken export file for project and save as a csv into the TLM tool folder (under MAS project data folder)
+2. (remote users only) remote into the sklabpc007 computer using the FCALABS login information
+3. (remote users only)  double click the "Native Trait Analysis toool" shortcut on the desktop.  CMD prompt should show the files being analyzed and when it is finished.  Once done you can exit remote desktop
+4. (non-remote users) double click python file on your computer to run script.   CMD prompt should show the files being analyzed and when it is finished. 
+5. Once completed you can move the report from the completed folder to its corresponding project folder
