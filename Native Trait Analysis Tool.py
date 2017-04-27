@@ -2,7 +2,6 @@ import csv
 import pandas as pd
 from pandas import ExcelWriter
 from TLM import TraitLinkedMarker as Trait
-from TLM import CallConversion
 from summary_class import *
 import glob
 import os
@@ -11,12 +10,12 @@ import time
 '''Version 3 of the TLM panel tool-- Validated April 2017 -- [Author: Brian James]'''
 
 #  get a list of all the csv files to run the script on
-path = r'\\CA016NDOWD001\SaskatoonResearchStation\5. Lab\MAS\2. Project Data\TLM tool'
+path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3'
 extension = 'csv'
 os.chdir(path)
 result = [i for i in glob.glob('*.{}'.format(extension))]
 
-completed_path = r'\\CA016NDOWD001\SaskatoonResearchStation\5. Lab\MAS\2. Project Data\TLM tool\completed'
+completed_path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3\completed'
 
 results_files = []
 for i in result:
@@ -26,42 +25,6 @@ for i in result:
         continue
     else:
         results_files.append(i)
-
-
-# ---------------------------------------- Defined Variables ----------------------------------------------------------
-
-
-def cyto_gt200(header_list):
-    """if header list from the Kraken file have either A Cyto or GT200 change the listed name to the Variety name
-    :param header_list: is a list of headers found in the Kraken file being analyzed """
-
-    if 'Cyto Zygosity Call' in header_list:
-        #  change the header to read Cyto Call
-        header_list = ['Cyto Call' if hdr == 'Cyto Zygosity Call' else hdr for hdr in header_list]
-
-    if 'GT200 Zygosity Call' in header_list:
-        #  change the header to read GT200 Call
-        header_list = ['GT200 Call' if hdr2 == 'GT200 Zygosity Call' else hdr2 for hdr2 in header_list]
-
-    return header_list
-
-
-def cgl_conv(header_list):
-    """get a list of what headers are in the kraken study, and assign values to cyto, gt200 and LepR3
-    :param header_list: header list from Kraken csv file
-    """
-
-    cgl_sum = 0
-    if 'Cyto Zygosity Call' in header_list:
-        cgl_sum += 1
-
-    if 'GT 200 Zygosity Call' in header_list:
-        cgl_sum += 10
-
-    if 'LepR3-R3S3A Zygosity Call' in header_list:
-        cgl_sum += 100
-
-    return cgl_sum
 
 #  ----------------------------------  read the folder and find files for analysis  -----------------------------------
 
@@ -115,126 +78,39 @@ for fname in results_files:
     with open(encodename, 'rb') as kraken:
         kreader = csv.DictReader(kraken)
         kheaders = kreader.fieldnames
-        new_headers = cyto_gt200(kheaders)
-        conv_kraken = cgl_conv(kheaders)
         creader = csv.reader(kraken)
 
-        #  ----------------------------------- Cyto, GT200, and LepR3 Conversion --------------------------------------
+        #  ---------------------------- Cyto, GT200, BGSP-02 and LepR3 Conversion ------------------------------------
 
-        if conv_kraken > 0:  # if any of the three assays are in the kraken study.
+        convert_df = pd.read_csv(encodename)
 
-            # get the index of which columns they are in
-            cyto = ['Cyto Zygosity Call']
-            gt200 = ['GT 200 Zygosity Call']
-            lep3 = ['LepR3-R3S3A Zygosity Call']
+        if 'Cyto Zygosity Call' in convert_df.columns:
+            convert_df = convert_df.replace(to_replace={'Cyto Zygosity Call': {'Trait': 'A-Cyto'}})
+            convert_df = convert_df.replace(to_replace={'Cyto Zygosity Call': {'Wildtype': 'B-Cyto'}})
+            convert_df.rename(columns={'Cyto Zygosity Call': 'Cyto Call'}, inplace=True)
 
-            cyto_index = []
-            for ci in cyto:
-                # noinspection PyBroadException
-                try:
-                    cyto_index.append(kheaders.index(ci))
-                except:
-                    continue
+        if 'GT 200 Zygosity Call' in convert_df.columns:
+            convert_df = convert_df.replace(to_replace={'GT 200 Zygosity Call': {'Homo': 'Plus'}})
+            convert_df = convert_df.replace(to_replace={'GT 200 Zygosity Call': {'Null': 'Minus'}})
+            convert_df.rename(columns={'GT 200 Zygosity Call': 'GT200 Call'}, inplace=True)
 
-            gt200_index = []
-            for gi in gt200:
-                # noinspection PyBroadException
-                try:
-                    gt200_index.append(kheaders.index(gi))
-                except:
-                    continue
+        if 'GT200 Zygosity Call' in convert_df.columns:
+            convert_df = convert_df.replace(to_replace={'GT200 Zygosity Call': {'Homo': 'Plus'}})
+            convert_df = convert_df.replace(to_replace={'GT200 Zygosity Call': {'Null': 'Minus'}})
+            convert_df.rename(columns={'GT200 Zygosity Call': 'GT200 Call'}, inplace=True)
 
-            lep3_index = []
-            for li in lep3:
-                # noinspection PyBroadException
-                try:
-                    lep3_index.append(kheaders.index(li))
-                except:
-                    continue
+        if 'LepR3-R3S3A Zygosity Call' in convert_df.columns:
+            convert_df = convert_df.replace(to_replace={'LepR3-R3S3A Zygosity Call': {'Homo': 'Trait'}})
+            convert_df = convert_df.replace(to_replace={'LepR3-R3S3A Zygosity Call': {'Hemi': 'Seg'}})
+            convert_df = convert_df.replace(to_replace={'LepR3-R3S3A Zygosity Call': {'Null': 'Wildtype'}})
 
-            # re-write headers so that if A-cyto or GT200 are in list, they are overwritten by new column names
-            with open('temp_' + fname, 'wb') as outfile:
-                hdrwriter = csv.writer(outfile)
-                hdrwriter.writerow(new_headers)
+        if 'BGSP-02 Zygosity Call' in convert_df.columns:
+            convert_df = convert_df.replace(to_replace={'BGSP-02 Zygosity Call': {'Trait': 'Plus'}})
+            convert_df = convert_df.replace(to_replace={'BGSP-02 Zygosity Call': {'Wildtype': 'Minus'}})
+            convert_df.rename(columns={'BGSP-02 Zygosity Call': 'BGSP-02'}, inplace=True)
 
-                for line in creader:
-
-                    if conv_kraken == 1:  # Kraken file has A Cyto only
-                        cyto_col = int(cyto_index[0])  # get the A cyto column number from the index
-                        cy = CallConversion(line[cyto_col])  # call on class CallConversion to convert cyto row data
-                        cy_call = cy.cyto_call()  # return the call as A-Cyto or B-Cyto
-                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)  # replace call
-                        hdrwriter.writerow(line)  # write the line to the new temporary file
-
-                    elif conv_kraken == 10:  # Kraken file has GT200 only
-                        gt_col = int(gt200_index[0])
-                        gt = CallConversion(line[gt_col])
-                        gt_call = gt.plus_minus()
-                        line[gt_col] = line[gt_col].replace(line[gt_col], gt_call)
-                        hdrwriter.writerow(line)
-
-                    elif conv_kraken == 11:  # Kraken file has ACyto and GT200
-                        cyto_col = int(cyto_index[0])
-                        gt_col = int(gt200_index[0])
-                        cy = CallConversion(line[cyto_col])
-                        cy_call = cy.cyto_call()
-                        gt = CallConversion(line[gt_col])
-                        gt_call = gt.plus_minus()
-                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)
-                        line[gt_col] = line[gt_col].replace(line[gt_col], gt_call)
-                        hdrwriter.writerow(line)
-
-                    elif conv_kraken == 100:  # Kraken file has LepR3 only
-                        l3_col = int(lep3_index[0])
-                        l3 = CallConversion(line[l3_col])
-                        l3_call = l3.zygo_conv()
-                        line[l3_col] = line[l3_col].replace(line[l3_col], l3_call)
-                        hdrwriter.writerow(line)
-
-                    elif conv_kraken == 101:  # Kraken file has A Cyto and LepR3
-                        cyto_col = int(cyto_index[0])
-                        l3_col = int(lep3_index[0])
-                        cy = CallConversion(line[cyto_col])
-                        cy_call = cy.cyto_call()
-                        l3 = CallConversion(line[l3_col])
-                        l3_call = l3.zygo_conv()
-                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)
-                        line[l3_col] = line[l3_col].replace(line[l3_col], l3_call)
-                        hdrwriter.writerow(line)
-
-                    elif conv_kraken == 110:  # Kraken file has GT200 and LepR3
-                        gt_col = int(gt200_index[0])
-                        l3_col = int(lep3_index[0])
-                        gt = CallConversion(line[gt_col])
-                        gt_call = gt.plus_minus()
-                        l3 = CallConversion(line[l3_col])
-                        l3_call = l3.zygo_conv()
-                        line[gt_col] = line[gt_col].replace(line[gt_col], gt_call)
-                        line[l3_col] = line[l3_col].replace(line[l3_col], l3_call)
-                        hdrwriter.writerow(line)
-
-                    elif conv_kraken == 111:  # Kraken file has A Cyto, GT200, and LepR3
-                        cyto_col = int(cyto_index[0])
-                        gt_col = int(gt200_index[0])
-                        l3_col = int(lep3_index[0])
-                        cy = CallConversion(line[cyto_col])
-                        cy_call = cy.cyto_call()
-                        gt = CallConversion(line[gt_col])
-                        gt_call = gt.plus_minus()
-                        l3 = CallConversion(line[l3_col])
-                        l3_call = l3.zygo_conv()
-                        line[cyto_col] = line[cyto_col].replace(line[cyto_col], cy_call)
-                        line[gt_col] = line[gt_col].replace(line[gt_col], gt_call)
-                        line[l3_col] = line[l3_col].replace(line[l3_col], l3_call)
-                        hdrwriter.writerow(line)
-
-            kdf = pd.read_csv('temp_' + fname)  # make a dataframe from encoded file for future merging
-            df_final = pd.read_csv('temp_' + fname)  # make a final dataframe for final merge
-            os.remove('temp_' + fname)  # get rid of the temp file
-
-        else:
-            kdf = pd.read_csv(encodename)
-            df_final = pd.read_csv(encodename)
+        kdf = convert_df
+        df_final = convert_df
 
     pandas_list = []  # an empty list to append each panels dataframe name (if used) for a final merge sequence
 
@@ -608,6 +484,58 @@ for fname in results_files:
 
         os.remove('n13_temp.csv')
 
+        # -------------------------------------------- FAE Analysis -------------------------------------------------
+        """determine if FAE panel is in the kraken study, and if so makes a df with a FAE summary call"""
+
+        fae_panel = ['FAE 1-1 A Zygosity Call', 'FAE 1-2 C Zygosity Call']
+
+        #  index the headers to see if the FAE panel is in the kraken file, and if so, which column #'s they are in
+        fae_index = []
+        for faei in fae_panel:
+            # noinspection PyBroadException
+            try:
+                fae_index.append(kheaders.index(faei))
+            except:
+                continue
+        fae_len = int(len(fae_index))
+
+        # if that index is not empty, make a pandas dataframe, and write that section to a new csv to run analysis
+        if fae_len >= 2:
+            #  keep the unique identifiers from kraken study in new temp dataframe
+            fae_headers = ['Box', 'Well', 'Project', 'Pedigree', 'Source ID', 'Geno_Id', 'RowId', 'Loc Seq#']
+
+            for i in fae_index:  # add the FAE assays in the kraken file to the header list
+                fae_headers.append(kheaders[i])
+
+            fae_df = kdf[fae_headers]  # make a dataframe of just FAE data
+            fae_df.to_csv('fae_temp.csv', index=False)
+
+            with open('fae_temp.csv', 'rb') as faeinput:  # open that newly created dataframe
+                faereader = csv.DictReader(faeinput)
+                faeheaders = faereader.fieldnames
+
+                with open('fae_call.csv', 'wb') as faeoutput:  # make a new file with the FAE call column added
+                    faeheaders.append('FAE Summary Call')
+                    faewriter = csv.DictWriter(faeoutput, fieldnames=faeheaders)
+                    faewriter.writeheader()
+
+                    for line in faereader:
+
+                        dict_fae = {}  # make a dictionary for each line in temp file, to pass into the TLM class
+                        if len(fae_index) > 0:
+                            for i in fae_index:
+                                dict_fae[kheaders[i]] = line[kheaders[i]]
+
+                        fae = Trait(dict_fae)  # initiate the TLM class with the dictionary
+                        fae_call = fae.get_fae()  # get the trait/seg/wildtype call for this line in the file
+                        line['FAE Summary Call'] = fae_call  # add call to the DictReader line
+
+                        faewriter.writerow(line)  # write the line (with the call now in the line) to the call file
+
+                    pandas_list.append('fae')  # add n13 (string) to pandas list for prompts to merge later
+
+            os.remove('fae_temp.csv')
+
     # ----------------------------------------- Merge with Pandas -----------------------------------------------------
 
     # read each panels analyzed data as a dataframe, and merge them in sequence.
@@ -661,7 +589,6 @@ for fname in results_files:
     else:
         merge5 = merge4
 
-
     # merge that with RLM7 winter dataframe if that panel is in the kraken file
 
     if 'rlm7w' in pandas_list:
@@ -680,9 +607,18 @@ for fname in results_files:
     else:
         merge7 = merge6
 
+    # merge that with FAE dataframe if that panel is in the kraken file
+
+    if 'fae' in pandas_list:
+        fae_df = pd.read_csv('fae_call.csv')
+        merge8 = pd.merge(left=merge7, right=fae_df, how='left')
+        os.remove('fae_call.csv')
+    else:
+        merge8 = merge7
+
     # merge with final dataframe and write the file (gets any assays not in panel tacked on to end of kraken report)
 
-    merge_final = pd.merge(left=merge7, right=df_final, how='left')
+    merge_final = pd.merge(left=merge8, right=df_final, how='left')
 
     os.chdir(completed_path)
     merge_final.to_excel(results_writer, 'Report', index=False)
