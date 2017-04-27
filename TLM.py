@@ -340,6 +340,66 @@ class TraitLinkedMarker(object):
 
             return tlm
 
+    def get_fae(self):
+        """Read the FAE 1-1A and FAE 1-2C markers and return a summarized call"""
+
+        trait = 0
+        seg = 0
+        wildtype = 0
+        no_call = 0
+        no_data = 0
+
+        for assay, allele in self.dic.items():
+
+            if assay == 'FAE 1-1 A Zygosity Call':
+                if allele == 'Trait':
+                    trait += 1
+                elif allele == 'Homo':
+                    trait += 1
+                elif allele == 'Seg':
+                    seg += 1
+                elif allele == 'Hemi':
+                    seg += 1
+                elif allele == 'Wildtype':
+                    wildtype += 1
+                elif allele == 'Null':
+                    wildtype += 1
+                elif allele == 'No Call':
+                    no_call += 1
+                elif allele == 'No Data':
+                    no_data += 1
+
+            elif assay == 'FAE 1-2 C Zygosity Call':
+                if allele == 'Trait':
+                    trait += 1
+                elif allele == 'Homo':
+                    trait += 1
+                elif allele == 'Seg':
+                    seg += 1
+                elif allele == 'Hemi':
+                    seg += 1
+                elif allele == 'Wildtype':
+                    wildtype += 1
+                elif allele == 'Null':
+                    wildtype += 1
+                elif allele == 'No Call':
+                    no_call += 1
+                elif allele == 'No Data':
+                    no_data += 1
+
+            '''return the call based on the following criteria'''
+
+            if no_data > 0:
+                return 'No Data'
+            elif no_call > 0:
+                return 'No Call'
+            elif wildtype > 0:
+                return 'Wildtype'
+            elif seg in range(1, 3) and wildtype == 0:
+                return 'Seg'
+            elif trait == 2:
+                return 'Trait'
+
 
 class CallConversion(object):
     """converts a homo/hemi/null call into the trait/hemi/wildtype or plus/minus calls for Variety book"""
@@ -360,7 +420,11 @@ class CallConversion(object):
     def plus_minus(self):
         if self.call == 'Homo':
             return 'Plus'
+        if self.call == 'Trait':
+            return 'Plus'
         if self.call == 'Null':
+            return 'Minus'
+        if self.call == 'Wildtype':
             return 'Minus'
         else:
             return self.call
@@ -372,3 +436,4 @@ class CallConversion(object):
             return 'B-Cyto'
         else:
             return self.call
+
