@@ -9,16 +9,36 @@ import time
 
 '''Version 3 of the TLM panel tool-- Validated April 2017 -- [Author: Brian James]'''
 
-#  get a list of all the csv files to run the script on
 path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3'
+xlextension = 'xlsx'
 extension = 'csv'
 os.chdir(path)
-result = [i for i in glob.glob('*.{}'.format(extension))]
+xlsx_result = [xl for xl in glob.glob('*.{}'.format(xlextension))]
+
+# convert the xlsx files into csv files
+xl_files = []
+for xlsx_files in xlsx_result:
+    if 'temp_' in xlsx_files:
+        continue
+    if '_call' in xlsx_files:
+        continue
+    else:
+        xl_files.append(xlsx_files)
+
+for i in xl_files:
+    df_temp = pd.read_excel(i, index=False)
+    get_name = i.find('.')
+    csv_name = i[:get_name] + '.csv'
+    df_temp.to_csv(csv_name, index=False)
+    os.remove(i)
+
+#  get a list of all the csv files to run the script on
+csv_result = [i for i in glob.glob('*.{}'.format(extension))]
 
 completed_path = r'C:\Users\U590135\Desktop\Python\tlm_tool\TLM\Version 3\completed'
 
 results_files = []
-for i in result:
+for i in csv_result:
     if 'temp_' in i:
         continue
     if '_call' in i:
